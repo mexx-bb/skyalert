@@ -256,7 +256,14 @@ function switchTab(pageId) {
     if (p.id === pageId) p.classList.add('active');
   });
 
-  if (pageId === 'pageMap') setTimeout(drawWorldMap, 50);
+  if (pageId === 'pageMap') {
+    // Invalidate size immediately and after a short delay for smooth CSS transition
+    if (leafletMap) {
+      setTimeout(() => leafletMap.invalidateSize(), 150);
+      setTimeout(() => leafletMap.invalidateSize(), 400);
+    }
+    drawWorldMap();
+  }
   if (pageId === 'pageWatchlist') refreshWatchlist();
   if (pageId === 'pageNews' && !newsLoaded) loadNews();
 }
@@ -1413,6 +1420,12 @@ function drawWorldMap() {
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 19
     }).addTo(leafletMap);
+
+    // Reliable resize observer
+    const ro = new ResizeObserver(() => {
+      if (leafletMap) leafletMap.invalidateSize();
+    });
+    ro.observe(container);
   }
 
   if (!leafletMap) return;
@@ -1424,61 +1437,97 @@ function drawWorldMap() {
   flightMarkers.forEach(m => m.remove());
   flightMarkers = [];
 
+  // 1. Plot user's searched live flights (green/yellow/red dots)
   const liveFlights = currentFlights.filter(f => f.hasLive && f.latitude && f.longitude);
+  const bounds = L.latLngBounds();
 
   if (liveFlights.length > 0) {
-    const bounds = L.latLngBounds();
-
     liveFlights.forEach(f => {
       const color = f.status === 'cancelled' ? '#ef4444' : f.status === 'delayed' ? '#eab308' : '#22c55e';
-      
       const markerHtml = `
-        <div style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 10px ${color}; border: 2px solid #fff;"></div>
-        <div style="color: white; font-size: 10px; font-weight: bold; margin-top: 4px; text-shadow: 0 0 4px #000; text-align: center; width: 40px; margin-left: -14px;">${f.number.replace(' ','')}</div>
+        <div style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 10px ${color}; border: 2px solid #fff; position: relative; z-index: 1000;"></div>
+        <div style="color: white; font-size: 10px; font-weight: bold; margin-top: 4px; text-shadow: 0 0 4px #000; text-align: center; width: 40px; margin-left: -14px; position: relative; z-index: 1000;">${f.number.replace(' ','')}</div>
       `;
-      
-      const icon = L.divIcon({
-        className: 'custom-flight-icon',
-        html: markerHtml,
-        iconSize: [12, 12]
-      });
-
-      const marker = L.marker([f.latitude, f.longitude], { icon }).addTo(leafletMap);
-      
-      // Popup with flight info
+      const icon = L.divIcon({ className: 'custom-flight-icon', html: markerHtml, iconSize: [12, 12] });
+      const marker = L.marker([f.latitude, f.longitude], { icon, zIndexOffset: 1000 }).addTo(leafletMap);
       marker.bindPopup(`<strong>${f.airline} ${f.number}</strong><br/>${f.from} &rarr; ${f.to}<br/>Status: ${f.statusText}`);
-      
       flightMarkers.push(marker);
       bounds.extend([f.latitude, f.longitude]);
     });
-
-    if (liveFlights.length > 1) {
-      leafletMap.fitBounds(bounds, { padding: [30, 30] });
-    } else {
-      leafletMap.setView([liveFlights[0].latitude, liveFlights[0].longitude], 6);
-    }
-  } else {
-    // Show static popular airports if no live flights
-    const airports = [
-      { lat: 50.03, lng: 8.57, lbl: 'FRA' }, { lat: 48.35, lng: 11.78, lbl: 'MUC' },
-      { lat: -8.74, lng: 115.16, lbl: 'DPS' }, { lat: 25.25, lng: 55.36, lbl: 'DXB' }
-    ];
-    
-    const bounds = L.latLngBounds();
-    airports.forEach(a => {
-      const icon = L.divIcon({
-        className: 'custom-airport-icon',
-        html: `<div style="background-color: #60a5fa; width: 8px; height: 8px; border-radius: 50%; margin: 6px auto;"></div><div style="color: #60a5fa; font-size: 10px; font-weight: bold; text-shadow: 0 0 3px #000; text-align: center; width: 30px; margin-left:-10px;">${a.lbl}</div>`,
-        iconSize: [20, 20]
-      });
-      const marker = L.marker([a.lat, a.lng], { icon }).addTo(leafletMap);
-      flightMarkers.push(marker);
-      bounds.extend([a.lat, a.lng]);
-    });
-    
-    // Default view zoomed out
-    leafletMap.fitBounds(bounds, { maxZoom: 3, padding: [40, 40] });
+    if (liveFlights.length > 1) leafletMap.fitBounds(bounds, { padding: [30, 30] });
+    else leafletMap.setView([liveFlights[0].latitude, liveFlights[0].longitude], 6);
   }
+
+  // 2. Add full "Flightradar"-like Live Radar via OpenSky
+  fetchLiveRadarData();
+}
+
+let isFetchingRadar = false;
+let radarMarkers = [];
+
+async function fetchLiveRadarData() {
+  if (isFetchingRadar || !leafletMap) return;
+  isFetchingRadar = true;
+  try {
+    const b = leafletMap.getBounds();
+    const lamin = b.getSouth();
+    const lomin = b.getWest();
+    const lamax = b.getNorth();
+    const lomax = b.getEast();
+    
+    let url = 'https://opensky-network.org/api/states/all';
+    if (leafletMap.getZoom() > 3) {
+      url += `?lamin=${lamin}&lomin=${lomin}&lamax=${lamax}&lomax=${lomax}`;
+    }
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('OpenSky Error');
+    const data = await res.json();
+    
+    // Clear old radar markers
+    radarMarkers.forEach(m => m.remove());
+    radarMarkers = [];
+
+    const states = (data.states || []).slice(0, 800);
+
+    states.forEach(s => {
+      const callsign = (s[1] || '').trim();
+      const lon = s[5];
+      const lat = s[6];
+      const track = s[10] || 0;
+      const alt = s[13] || s[7] || 0;
+
+      if (!lon || !lat) return;
+
+      const markerHtml = `
+        <div style="transform: rotate(${track}deg); filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#60a5fa" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+          </svg>
+        </div>
+      `;
+      const icon = L.divIcon({ className: 'custom-flight-icon', html: markerHtml, iconSize: [20, 20], iconAnchor: [10, 10] });
+      const marker = L.marker([lat, lon], { icon, zIndexOffset: 0 }).addTo(leafletMap);
+      
+      const pAlt = Math.round(alt);
+      marker.bindPopup(`<strong>🛩️ ${callsign || 'Radar Flug'}</strong><br/>Höhe: ${pAlt}m<br/>Radar: OpenSky Network`);
+      radarMarkers.push(marker);
+    });
+
+  } catch (err) {
+    console.warn('Live Radar Load Failed', err);
+  } finally {
+    isFetchingRadar = false;
+  }
+}
+
+// Refresh radar when user stops moving the map
+if (typeof L !== 'undefined') {
+  setInterval(() => {
+    if ($('#pageMap').classList.contains('active')) {
+      fetchLiveRadarData();
+    }
+  }, 10000);
 }
 
 window.addEventListener('resize', () => {
