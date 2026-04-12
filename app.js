@@ -324,8 +324,8 @@ function initSearch() {
 
   // Route Search
   $('#routeSearchBtn').addEventListener('click', () => {
-    const from = $('#routeFrom').value.trim().toUpperCase();
-    const to = $('#routeTo').value.trim().toUpperCase();
+    const from = $('#routeFrom').value.trim();
+    const to = $('#routeTo').value.trim();
     if (from || to) {
       performRouteSearch(from, to);
     }
@@ -340,8 +340,29 @@ function initSearch() {
   });
 }
 
-async function performRouteSearch(fromIata, toIata) {
+async function performRouteSearch(fromVal, toVal) {
   showTrendingLoading();
+
+  // Basic City to IATA Map
+  const cityMap = {
+    'BALI': 'DPS', 'MALLORCA': 'PMI', 'NEW YORK': 'JFK', 'LONDON': 'LHR', 
+    'PARIS': 'CDG', 'DUBAI': 'DXB', 'TOKIO': 'HND', 'BERLIN': 'BER',
+    'FRANKFURT': 'FRA', 'MÜNCHEN': 'MUC', 'MUNCHEN': 'MUC', 'HAMBURG': 'HAM',
+    'WIEN': 'VIE', 'ZÜRICH': 'ZRH', 'ZURICH': 'ZRH', 'ROM': 'FCO', 'MADRID': 'MAD'
+  };
+
+  const mapToIata = (val) => {
+    if (!val) return '';
+    const upper = val.toUpperCase();
+    if (cityMap[upper]) return cityMap[upper];
+    // If it's a 3 letter code, assume IATA
+    if (upper.length === 3) return upper;
+    // Try to find if string contains a known city name somewhere or just send upper
+    return upper.substring(0, 3); // Fallback to first 3 letters
+  };
+
+  const fromIata = mapToIata(fromVal);
+  const toIata = mapToIata(toVal);
 
   try {
     const result = await AviationAPI.getFlightsByRoute(fromIata, toIata);
@@ -352,7 +373,7 @@ async function performRouteSearch(fromIata, toIata) {
         <div class="empty-state">
           <div class="empty-icon">🔍</div>
           <div class="empty-text">Keine Flüge gefunden</div>
-          <div class="empty-sub">Für die Strecke ${fromIata || 'Alle'} → ${toIata || 'Alle'} konnten wir derzeit keine echten Live-Flüge abrufen.</div>
+          <div class="empty-sub">Für die Strecke ${fromVal || 'Alle'} → ${toVal || 'Alle'} (${fromIata || 'Alle'} → ${toIata || 'Alle'}) konnten wir derzeit keine Live-Flüge abrufen.</div>
         </div>
       `;
       $('#trendingCount').textContent = '0 Ergebnisse';
@@ -1294,102 +1315,91 @@ function initPWA() {
 }
 
 // ===== WORLD MAP =====
+let leafletMap = null;
+let flightMarkers = [];
+
 function drawWorldMap() {
-  const canvas = document.getElementById('worldMap');
-  if (!canvas) return;
+  const container = document.getElementById('leafletMap');
+  if (!container) return;
 
-  const container = canvas.parentElement;
-  const W = container.clientWidth;
-  const H = container.clientHeight;
+  // Initialize Leaflet map once
+  if (!leafletMap && typeof L !== 'undefined') {
+    leafletMap = L.map('leafletMap', {
+      zoomControl: false,
+      attributionControl: false
+    }).setView([48.13, 11.58], 4); // Default center Europe (München)
 
-  canvas.width = W * 2;
-  canvas.height = H * 2;
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
+    // Dark map style
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19
+    }).addTo(leafletMap);
+  }
 
-  const ctx = canvas.getContext('2d');
-  ctx.scale(2, 2);
+  if (!leafletMap) return;
 
-  ctx.fillStyle = '#0d1320';
-  ctx.fillRect(0, 0, W, H);
+  // Clear existing markers
+  flightMarkers.forEach(m => m.remove());
+  flightMarkers = [];
 
-  // Grid
-  ctx.strokeStyle = 'rgba(59,130,246,0.05)';
-  ctx.lineWidth = 0.5;
-  for (let x = 0; x < W; x += 30) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-  for (let y = 0; y < H; y += 30) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-
-  const sx = W / 390;
-  const sy = H / 280;
-
-  ctx.fillStyle = 'rgba(59,130,246,0.07)';
-  ctx.strokeStyle = 'rgba(59,130,246,0.12)';
-  ctx.lineWidth = 1;
-
-  const continents = [
-    [[140,50],[170,45],[195,50],[220,55],[230,60],[245,65],[260,70],[265,85],[255,95],[240,100],[220,105],[200,110],[180,105],[160,98],[145,90],[135,75],[140,60]],
-    [[150,115],[175,110],[200,115],[220,120],[235,130],[245,150],[240,180],[230,210],[215,235],[200,248],[185,250],[170,240],[160,220],[150,195],[145,170],[140,145],[142,125]],
-    [[250,85],[270,80],[290,85],[310,95],[315,110],[320,125],[310,140],[295,145],[280,140],[268,130],[258,120],[248,105],[245,95]],
-    [[270,55],[300,45],[330,50],[360,55],[380,65],[385,85],[375,105],[360,115],[340,120],[320,115],[310,100],[295,80],[280,65]]
-  ];
-
-  continents.forEach(pts => {
-    ctx.beginPath();
-    ctx.moveTo(pts[0][0]*sx, pts[0][1]*sy);
-    for (let i = 1; i < pts.length; i++) {
-      const prev = pts[i-1], curr = pts[i];
-      ctx.quadraticCurveTo(prev[0]*sx, prev[1]*sy, (prev[0]+curr[0])/2*sx, (prev[1]+curr[1])/2*sy);
-    }
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-  });
-
-  // Plot live flights on map if available
   const liveFlights = currentFlights.filter(f => f.hasLive && f.latitude && f.longitude);
-  liveFlights.forEach(f => {
-    // Convert lat/lon to pixel (very rough Mercator)
-    const px = ((f.longitude + 180) / 360) * W;
-    const py = ((90 - f.latitude) / 180) * H;
 
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(px, py, 4, 0, Math.PI * 2);
-    ctx.fillStyle = f.status === 'cancelled' ? '#ef4444' : f.status === 'delayed' ? '#eab308' : '#22c55e';
-    ctx.globalAlpha = 0.2;
-    ctx.fill();
-    ctx.restore();
+  if (liveFlights.length > 0) {
+    const bounds = L.latLngBounds();
 
-    ctx.beginPath();
-    ctx.arc(px, py, 2, 0, Math.PI * 2);
-    ctx.fillStyle = f.status === 'cancelled' ? '#ef4444' : f.status === 'delayed' ? '#eab308' : '#22c55e';
-    ctx.fill();
+    liveFlights.forEach(f => {
+      const color = f.status === 'cancelled' ? '#ef4444' : f.status === 'delayed' ? '#eab308' : '#22c55e';
+      
+      const markerHtml = `
+        <div style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 10px ${color}; border: 2px solid #fff;"></div>
+        <div style="color: white; font-size: 10px; font-weight: bold; margin-top: 4px; text-shadow: 0 0 4px #000; text-align: center; width: 40px; margin-left: -14px;">${f.number.replace(' ','')}</div>
+      `;
+      
+      const icon = L.divIcon({
+        className: 'custom-flight-icon',
+        html: markerHtml,
+        iconSize: [12, 12]
+      });
 
-    ctx.font = `${Math.max(6, 7*Math.min(sx,sy))}px Inter, sans-serif`;
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.textAlign = 'center';
-    ctx.fillText(f.number.replace(' ',''), px, py - 6);
-  });
-
-  // Static airports if no live data
-  if (liveFlights.length === 0) {
-    const airports = [
-      {x:170,y:85,color:'#60a5fa',label:'FRA'},{x:175,y:80,color:'#60a5fa',label:'MUC'},
-      {x:260,y:75,color:'#60a5fa',label:'IST'},{x:290,y:110,color:'#ef4444',label:'TLV'},
-      {x:265,y:120,color:'#eab308',label:'BEY'},{x:280,y:115,color:'#eab308',label:'AMM'},
-      {x:310,y:125,color:'#22c55e',label:'DOH'},{x:320,y:120,color:'#22c55e',label:'DXB'}
-    ];
-    airports.forEach(a => {
-      ctx.save(); ctx.beginPath(); ctx.arc(a.x*sx,a.y*sy,5,0,Math.PI*2);
-      ctx.fillStyle=a.color; ctx.globalAlpha=0.15; ctx.fill(); ctx.restore();
-      ctx.beginPath(); ctx.arc(a.x*sx,a.y*sy,2.5,0,Math.PI*2); ctx.fillStyle=a.color; ctx.fill();
-      ctx.font=`${Math.max(7,8*Math.min(sx,sy))}px Inter, sans-serif`;
-      ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.textAlign='center';
-      ctx.fillText(a.label, a.x*sx, a.y*sy-7);
+      const marker = L.marker([f.latitude, f.longitude], { icon }).addTo(leafletMap);
+      
+      // Popup with flight info
+      marker.bindPopup(`<strong>${f.airline} ${f.number}</strong><br/>${f.from} &rarr; ${f.to}<br/>Status: ${f.statusText}`);
+      
+      flightMarkers.push(marker);
+      bounds.extend([f.latitude, f.longitude]);
     });
+
+    if (liveFlights.length > 1) {
+      leafletMap.fitBounds(bounds, { padding: [30, 30] });
+    } else {
+      leafletMap.setView([liveFlights[0].latitude, liveFlights[0].longitude], 6);
+    }
+  } else {
+    // Show static popular airports if no live flights
+    const airports = [
+      { lat: 50.03, lng: 8.57, lbl: 'FRA' }, { lat: 48.35, lng: 11.78, lbl: 'MUC' },
+      { lat: -8.74, lng: 115.16, lbl: 'DPS' }, { lat: 25.25, lng: 55.36, lbl: 'DXB' }
+    ];
+    
+    const bounds = L.latLngBounds();
+    airports.forEach(a => {
+      const icon = L.divIcon({
+        className: 'custom-airport-icon',
+        html: `<div style="background-color: #60a5fa; width: 8px; height: 8px; border-radius: 50%; margin: 6px auto;"></div><div style="color: #60a5fa; font-size: 10px; font-weight: bold; text-shadow: 0 0 3px #000; text-align: center; width: 30px; margin-left:-10px;">${a.lbl}</div>`,
+        iconSize: [20, 20]
+      });
+      const marker = L.marker([a.lat, a.lng], { icon }).addTo(leafletMap);
+      flightMarkers.push(marker);
+      bounds.extend([a.lat, a.lng]);
+    });
+    
+    // Default view zoomed out
+    leafletMap.fitBounds(bounds, { maxZoom: 3, padding: [40, 40] });
   }
 }
 
 window.addEventListener('resize', () => {
-  if ($('#pageMap').classList.contains('active')) drawWorldMap();
+  if ($('#pageMap').classList.contains('active') && leafletMap) leafletMap.invalidateSize();
 });
 
 // ===== UI HELPERS =====

@@ -86,6 +86,29 @@ body {
   }
 }
 
+/* ===== LEAFLET overrides for Dark Theme ===== */
+.leaflet-container {
+  background: var(--bg-card);
+  font-family: var(--font-family);
+}
+.leaflet-popup-content-wrapper, .leaflet-popup-tip {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius-md);
+}
+.leaflet-popup-close-button {
+  color: var(--text-muted) !important;
+}
+.custom-flight-icon, .custom-airport-icon {
+  background: transparent;
+  border: none;
+}
+
+
 /* ===== TOP BAR ===== */
 .top-bar {
   display: flex;
