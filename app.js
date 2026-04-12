@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSettings();
   initApiKeySettings();
   initManualRefresh();
+  initQuickActions();
   initModalHandlers();
   initOnlineStatus();
   initPWA();
@@ -245,23 +246,48 @@ function generateAlertsFromFlights(flights) {
 }
 
 // ===== TAB NAVIGATION =====
+function switchTab(pageId) {
+  $$('.tab-item').forEach(t => t.classList.remove('active'));
+  const targetTab = Array.from($$('.tab-item')).find(t => t.dataset.page === pageId);
+  if (targetTab) targetTab.classList.add('active');
+
+  $$('.page').forEach(p => {
+    p.classList.remove('active');
+    if (p.id === pageId) p.classList.add('active');
+  });
+
+  if (pageId === 'pageMap') setTimeout(drawWorldMap, 50);
+  if (pageId === 'pageWatchlist') refreshWatchlist();
+  if (pageId === 'pageNews' && !newsLoaded) loadNews();
+}
+
 function initTabNav() {
   $$('.tab-item').forEach(tab => {
     tab.addEventListener('click', () => {
-      const pageId = tab.dataset.page;
-      $$('.tab-item').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      $$('.page').forEach(p => {
-        p.classList.remove('active');
-        if (p.id === pageId) p.classList.add('active');
-      });
-      if (pageId === 'pageMap') setTimeout(drawWorldMap, 50);
-      // Refresh watchlist when switching to it
-      if (pageId === 'pageWatchlist') refreshWatchlist();
-      // Load news on first switch
-      if (pageId === 'pageNews' && !newsLoaded) loadNews();
+      switchTab(tab.dataset.page);
     });
   });
+}
+
+// ===== QUICK ACTIONS =====
+function initQuickActions() {
+  $$('.quick-action-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const action = card.dataset.action;
+      if (action === 'nearby') {
+        switchTab('pageMap');
+      } else if (action === 'disruptions') {
+        switchTab('pageAlerts');
+      }
+    });
+  });
+
+  const banner = $('#disruptionBanner');
+  if (banner) {
+    banner.addEventListener('click', () => {
+      switchTab('pageAlerts');
+    });
+  }
 }
 
 // ===== SEARCH =====
