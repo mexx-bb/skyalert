@@ -1049,19 +1049,26 @@ function renderAirlines() {
 // ===== RENDER ALERTS =====
 function renderAlerts() {
   const container = $('#alertsContainer');
+  const filterInput = $('#alertsFilterInput');
+  const query = filterInput ? filterInput.value.trim().toLowerCase() : '';
 
-  if (alerts.length === 0) {
+  let displayAlerts = alerts;
+  if (query) {
+    displayAlerts = alerts.filter(a => a.body.toLowerCase().includes(query));
+  }
+
+  if (displayAlerts.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">🔔</div>
-        <div class="empty-text">Keine Benachrichtigungen</div>
-        <div class="empty-sub">Statusänderungen von Flügen erscheinen hier automatisch</div>
+        <div class="empty-text">${alerts.length === 0 ? 'Keine Benachrichtigungen' : 'Keine Treffer'}</div>
+        <div class="empty-sub">${alerts.length === 0 ? 'Statusänderungen von Flügen erscheinen hier automatisch' : 'Versuche einen anderen Suchbegriff'}</div>
       </div>
     `;
     return;
   }
 
-  container.innerHTML = alerts.map(a => `
+  container.innerHTML = displayAlerts.map(a => `
     <div class="alert-card ${a.unread ? 'unread' : ''}">
       <div class="alert-header">
         <span class="alert-type ${a.type}">${a.typeText}</span>
@@ -1070,6 +1077,11 @@ function renderAlerts() {
       <div class="alert-body">${a.body}</div>
     </div>
   `).join('');
+}
+
+// Bind input event for live filtering
+if ($('#alertsFilterInput')) {
+  $('#alertsFilterInput').addEventListener('input', renderAlerts);
 }
 
 // ===== NEWS =====
