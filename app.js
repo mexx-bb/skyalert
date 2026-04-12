@@ -456,6 +456,13 @@ async function performRouteSearch(fromVal, toVal) {
     const result = await AviationAPI.getFlightsByRoute(fromIata, toIata);
     const flights = (result.data || []).map(AviationAPI.transformFlight);
 
+    // Make available for modal and watchlist
+    flights.forEach(f => {
+      const idx = currentFlights.findIndex(cf => cf.numberRaw === f.numberRaw);
+      if (idx !== -1) currentFlights[idx] = f;
+      else currentFlights.push(f);
+    });
+
     if (flights.length === 0) {
       $('#trendingList').innerHTML = `
         <div class="empty-state">
@@ -490,6 +497,13 @@ async function performSearch(query, dateStr) {
   try {
     const result = await AviationAPI.search(query, dateStr);
     const flights = (result.data || []).map(AviationAPI.transformFlight);
+
+    // Make available for modal and watchlist
+    flights.forEach(f => {
+      const idx = currentFlights.findIndex(cf => cf.numberRaw === f.numberRaw);
+      if (idx !== -1) currentFlights[idx] = f;
+      else currentFlights.push(f);
+    });
 
     if (flights.length === 0) {
       $('#trendingList').innerHTML = `
