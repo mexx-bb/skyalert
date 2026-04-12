@@ -257,12 +257,16 @@ function switchTab(pageId) {
   });
 
   if (pageId === 'pageMap') {
-    // Invalidate size immediately and after a short delay for smooth CSS transition
-    if (leafletMap) {
-      setTimeout(() => leafletMap.invalidateSize(), 150);
-      setTimeout(() => leafletMap.invalidateSize(), 400);
-    }
     drawWorldMap();
+    // Invalidate size immediately and repeatedly during CSS transition
+    [50, 150, 300, 500].forEach(delay => {
+      setTimeout(() => { 
+        if (leafletMap) {
+          leafletMap.invalidateSize(true);
+          if (delay === 300) window.dispatchEvent(new Event('resize'));
+        }
+      }, delay);
+    });
   }
   if (pageId === 'pageWatchlist') refreshWatchlist();
   if (pageId === 'pageNews' && !newsLoaded) loadNews();
