@@ -338,12 +338,75 @@ function initSearch() {
   $('#routeTo').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') $('#routeSearchBtn').click();
   });
+
+  // Autocomplete Setup
+  setupAutocomplete($('#routeFrom'), $('#autoFrom'));
+  setupAutocomplete($('#routeTo'), $('#autoTo'));
+
+  // Close autocomplete on click outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.route-inputs')) {
+      $$('.autocomplete-list').forEach(l => l.style.display = 'none');
+    }
+  });
+}
+
+function setupAutocomplete(inputEl, listEl) {
+  if (typeof AIRPORTS_DB === 'undefined') return;
+
+  inputEl.addEventListener('input', () => {
+    const val = inputEl.value.trim().toLowerCase();
+    listEl.innerHTML = '';
+    
+    if (val.length < 2) {
+      listEl.style.display = 'none';
+      return;
+    }
+
+    // Search in DB
+    const matches = AIRPORTS_DB.filter(a => 
+      a.i.toLowerCase().includes(val) || 
+      a.c.toLowerCase().includes(val) || 
+      a.n.toLowerCase().includes(val) || 
+      a.co.toLowerCase().includes(val)
+    ).slice(0, 10); // Max 10 items
+
+    if (matches.length > 0) {
+      listEl.innerHTML = matches.map(a => `
+        <div class="autocomplete-item" data-iata="${a.i}">
+          <div class="ac-main">
+            <span>${a.c} (${a.co})</span>
+            <span class="ac-iata">${a.i}</span>
+          </div>
+          <div class="ac-sub">${a.n}</div>
+        </div>
+      `).join('');
+      
+      listEl.style.display = 'block';
+
+      // Click handler for items
+      listEl.querySelectorAll('.autocomplete-item').forEach(item => {
+        item.addEventListener('click', () => {
+          inputEl.value = item.dataset.iata;
+          listEl.style.display = 'none';
+        });
+      });
+    } else {
+      listEl.style.display = 'none';
+    }
+  });
+
+  inputEl.addEventListener('focus', () => {
+    if (inputEl.value.trim().length >= 2 && listEl.innerHTML !== '') {
+      listEl.style.display = 'block';
+    }
+  });
 }
 
 async function performRouteSearch(fromVal, toVal) {
   showTrendingLoading();
 
-  // Basic City to IATA Map
+  // Basic City to IATA Map for fallback if DB is not used directly
   const cityMap = {
     'BALI': 'DPS', 'MALLORCA': 'PMI', 'NEW YORK': 'JFK', 'LONDON': 'LHR', 
     'PARIS': 'CDG', 'DUBAI': 'DXB', 'TOKIO': 'HND', 'BERLIN': 'BER',
@@ -355,10 +418,15 @@ async function performRouteSearch(fromVal, toVal) {
     if (!val) return '';
     const upper = val.toUpperCase();
     if (cityMap[upper]) return cityMap[upper];
-    // If it's a 3 letter code, assume IATA
+    
+    // If we have DB, try to find an exact match for city
+    if (typeof AIRPORTS_DB !== 'undefined') {
+      const match = AIRPORTS_DB.find(a => a.c.toUpperCase() === upper || a.co.toUpperCase() === upper);
+      if (match) return match.i;
+    }
+
     if (upper.length === 3) return upper;
-    // Try to find if string contains a known city name somewhere or just send upper
-    return upper.substring(0, 3); // Fallback to first 3 letters
+    return upper.substring(0, 3);
   };
 
   const fromIata = mapToIata(fromVal);

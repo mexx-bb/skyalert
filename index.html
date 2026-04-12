@@ -152,10 +152,16 @@
             
             <div class="route-search-box" id="routeSearchBox">
               <h3 class="route-search-title">Strecke suchen</h3>
-              <div class="route-inputs">
-                <input type="text" id="routeFrom" class="route-input" placeholder="Von (z.B. MUC)" autocomplete="off" maxlength="5" />
+              <div class="route-inputs" style="position: relative;">
+                <div style="flex:1; position:relative;">
+                  <input type="text" id="routeFrom" class="route-input" placeholder="Von (z.B. Deutschland, MUC)" autocomplete="off" />
+                  <div class="autocomplete-list" id="autoFrom"></div>
+                </div>
                 <span class="route-arrow">→</span>
-                <input type="text" id="routeTo" class="route-input" placeholder="Nach (z.B. DPS oder Bali)" autocomplete="off" maxlength="5" />
+                <div style="flex:1; position:relative;">
+                  <input type="text" id="routeTo" class="route-input" placeholder="Nach (z.B. Bali, DPS)" autocomplete="off" />
+                  <div class="autocomplete-list" id="autoTo"></div>
+                </div>
                 <button class="route-btn" id="routeSearchBtn">Suchen</button>
               </div>
             </div>
@@ -469,6 +475,7 @@
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="airports_db.js"></script>
     <script src="api.js"></script>
     <script src="app.js"></script>
 </body>

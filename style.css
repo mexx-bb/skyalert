@@ -390,6 +390,40 @@ body {
 .route-btn:hover { background: #2563eb; box-shadow: var(--shadow-glow); }
 .route-btn:active { transform: scale(0.95); }
 
+/* Autocomplete */
+.autocomplete-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  margin-top: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  display: none;
+}
+
+.autocomplete-item {
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+}
+
+.autocomplete-item:last-child { border-bottom: none; }
+.autocomplete-item:hover { background: var(--bg-card-hover); }
+
+.ac-main { font-weight: 600; display: flex; justify-content: space-between; }
+.ac-iata { color: var(--accent-cyan); }
+.ac-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+
 /* ===== QUICK ACTIONS ===== */
 .quick-actions {
   display: grid;

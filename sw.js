@@ -2,11 +2,12 @@
 // SkyAlert Service Worker — Offline Caching & PWA Support
 // ============================================================
 
-const CACHE_NAME = 'skyalert-v4';
+const CACHE_NAME = 'skyalert-v5';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './style.css',
+  './airports_db.js',
   './api.js',
   './app.js',
   './manifest.json',
