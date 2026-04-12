@@ -181,8 +181,11 @@
 
           <!-- Trending -->
           <div class="section-header">
-            <h2>Flüge nach Tel Aviv (Live)</h2>
-            <span class="section-badge" id="trendingCount">Lädt...</span>
+            <h2>Aktuelle Flüge weltweit</h2>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="section-badge" id="trendingCount">Lädt...</span>
+              <button class="refresh-btn" id="manualRefreshBtn" title="Jetzt aktualisieren">↻</button>
+            </div>
           </div>
           <div class="flight-list" id="trendingList"></div>
 
@@ -195,26 +198,26 @@
 
           <!-- Data Sources Info -->
           <div class="data-sources-info">
-            <h3>📡 Datenquelle: AviationStack API (Live)</h3>
+            <h3>📡 Datenquelle: AviationStack API</h3>
             <div class="ds-grid">
               <div class="ds-item">
+                <span class="ds-interval" id="dsRefreshMode">Manuell</span>
+                <span class="ds-name">Aktualisierung</span>
+              </div>
+              <div class="ds-item">
                 <span class="ds-interval">3min</span>
-                <span class="ds-name">Flugstatus</span>
+                <span class="ds-name">Cache-TTL</span>
               </div>
               <div class="ds-item">
-                <span class="ds-interval">2min</span>
-                <span class="ds-name">Watchlist</span>
+                <span class="ds-interval">500</span>
+                <span class="ds-name">Requests/Monat</span>
               </div>
               <div class="ds-item">
-                <span class="ds-interval">5min</span>
-                <span class="ds-name">Störungszonen</span>
-              </div>
-              <div class="ds-item">
-                <span class="ds-interval">10min</span>
-                <span class="ds-name">Airline-Status</span>
+                <span class="ds-interval" id="dsQuotaUsed">0</span>
+                <span class="ds-name">Verbraucht</span>
               </div>
             </div>
-            <p class="ds-note">Echtzeit-Daten via AviationStack API · Cache: 3 Min. TTL · <span id="apiQuotaText" style="color: var(--text-muted);">0 / 500 API-Requests diesen Monat</span></p>
+            <p class="ds-note">Echtzeit-Daten via AviationStack API · <span id="apiQuotaText" style="color: var(--text-muted);">0 / 500 API-Requests diesen Monat</span></p>
           </div>
 
         </div>
@@ -372,27 +375,63 @@
         </div>
 
         <div class="settings-section">
-          <h3>Aktualisierung</h3>
+          <h3>🔄 Aktualisierung</h3>
           <div class="setting-item">
             <div>
               <strong>Auto-Refresh</strong>
-              <p>Flugstatus automatisch aktualisieren</p>
+              <p>Flugstatus automatisch aktualisieren (verbraucht API-Kontingent!)</p>
             </div>
-            <label class="toggle"><input type="checkbox" id="settingAutoRefresh" checked /><span class="toggle-slider"></span></label>
+            <label class="toggle"><input type="checkbox" id="settingAutoRefresh" /><span class="toggle-slider"></span></label>
           </div>
-          <div class="refresh-intervals">
-            <div class="ri-item"><span class="ri-label">Flugstatus</span><span class="ri-value">alle 3 Minuten</span></div>
-            <div class="ri-item"><span class="ri-label">Watchlist</span><span class="ri-value">alle 2 Minuten</span></div>
-            <div class="ri-item"><span class="ri-label">Störungszonen</span><span class="ri-value">alle 5 Minuten</span></div>
-            <div class="ri-item"><span class="ri-label">Airlines</span><span class="ri-value">alle 10 Minuten</span></div>
+          <div class="setting-hint" id="autoRefreshHint">
+            ⚠️ Auto-Refresh verbraucht ca. <strong>20 Requests/Stunde</strong>. Bei 500 Requests/Monat reicht das für ca. 25 Stunden. Empfehlung: <strong>Manuell aktualisieren</strong> (↻ Button auf der Startseite).
           </div>
         </div>
 
         <div class="settings-section">
+          <h3>🔑 API-Schlüssel (AviationStack)</h3>
+          <p class="settings-info" style="margin-bottom: 10px;">Standardmäßig wird der gemeinsame API-Key verwendet. Du kannst deinen eigenen Key eintragen, um dein eigenes Kontingent zu nutzen.</p>
+          <div class="api-key-input-group">
+            <input type="text" id="customApiKey" class="settings-input" placeholder="Eigenen API-Key eingeben..." autocomplete="off" />
+            <button class="save-btn" id="saveApiKey">💾 Speichern</button>
+          </div>
+          <div class="api-key-status" id="apiKeyStatus">
+            <span class="api-key-dot active"></span>
+            <span id="apiKeyStatusText">Standard-Key aktiv</span>
+          </div>
+          <button class="link-btn" id="resetApiKey">↩️ Standard-Key wiederherstellen</button>
+
+          <div class="api-instructions" id="apiInstructions">
+            <h4>📖 Eigenen API-Key erhalten (kostenlos):</h4>
+            <ol>
+              <li>Gehe zu <a href="https://aviationstack.com/" target="_blank" rel="noopener">aviationstack.com</a></li>
+              <li>Klicke auf <strong>„Free Signup“</strong> (kostenlos)</li>
+              <li>Erstelle ein Konto mit deiner E-Mail</li>
+              <li>Nach der Anmeldung findest du deinen <strong>API Access Key</strong> im Dashboard</li>
+              <li>Kopiere den Key und füge ihn oben ein</li>
+            </ol>
+            <p class="api-note">💡 <strong>Tipp:</strong> Jeder kostenlose Account hat <strong>500 Requests/Monat</strong>. Mit deinem eigenen Key verdoppelst du effektiv das verfügbare Kontingent!</p>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>API-Kontingent</h3>
+          <div class="quota-bar-container">
+            <div class="quota-bar">
+              <div class="quota-bar-fill" id="quotaBarFill" style="width: 0%;"></div>
+            </div>
+            <div class="quota-labels">
+              <span id="quotaUsed">0</span>
+              <span>/ 500 Requests</span>
+            </div>
+          </div>
+          <p class="settings-info" id="settingsQuota">Zurückgesetzt am 1. jedes Monats</p>
+        </div>
+
+        <div class="settings-section">
           <h3>App-Info</h3>
-          <p class="settings-info">Version 1.0.0 · PWA · Keine Anmeldung erforderlich</p>
+          <p class="settings-info">Version 2.0.0 · PWA · Keine Anmeldung erforderlich</p>
           <p class="settings-info">Datenquelle: AviationStack API (Echtzeit)</p>
-          <p class="settings-info" id="settingsQuota">API-Kontingent: 500 Requests / Monat (Free Tier)</p>
         </div>
       </div>
     </div>

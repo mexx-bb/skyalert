@@ -4,8 +4,29 @@
 // ============================================================
 
 const AviationAPI = (() => {
-  const API_KEY = 'c62e19481cff365b50173723adc49017';
+  const DEFAULT_API_KEY = 'c62e19481cff365b50173723adc49017';
+  const CUSTOM_KEY_STORAGE = 'skyalert_custom_api_key';
   const BASE_URL = 'https://api.aviationstack.com/v1';
+
+  function getActiveApiKey() {
+    return localStorage.getItem(CUSTOM_KEY_STORAGE) || DEFAULT_API_KEY;
+  }
+
+  function setCustomApiKey(key) {
+    if (key && key.trim().length > 10) {
+      localStorage.setItem(CUSTOM_KEY_STORAGE, key.trim());
+      return true;
+    }
+    return false;
+  }
+
+  function removeCustomApiKey() {
+    localStorage.removeItem(CUSTOM_KEY_STORAGE);
+  }
+
+  function hasCustomApiKey() {
+    return !!localStorage.getItem(CUSTOM_KEY_STORAGE);
+  }
 
   // Cache-TTL in Millisekunden
   const CACHE_TTL = {
@@ -82,7 +103,7 @@ const AviationAPI = (() => {
 
     // Build URL
     const url = new URL(`${BASE_URL}/${endpoint}`);
-    url.searchParams.set('access_key', API_KEY);
+    url.searchParams.set('access_key', getActiveApiKey());
     Object.entries(params).forEach(([k, v]) => {
       if (v !== null && v !== undefined && v !== '') {
         url.searchParams.set(k, v);
@@ -154,11 +175,19 @@ const AviationAPI = (() => {
   }
 
   /**
-   * Fetch flights related to Middle East (for trending/disruption view)
-   * Uses multiple airports in the region
+   * Fetch all flights (global view - no airport filter)
+   * Returns a broad mix of global flights for the home screen
+   */
+  async function getAllFlights() {
+    return apiCall('flights', {
+      limit: 100
+    }, 'flights_all_global', CACHE_TTL.flights);
+  }
+
+  /**
+   * Fetch flights related to Middle East for disruption tracking
    */
   async function getMiddleEastFlights() {
-    // Fetch arrivals to key Middle East airports
     return apiCall('flights', {
       arr_iata: 'TLV',
       limit: 50
@@ -415,6 +444,7 @@ const AviationAPI = (() => {
   return {
     getFlightsByAirport,
     getFlightByIata,
+    getAllFlights,
     getMiddleEastFlights,
     getFlightsToDestination,
     getFlightsFromOrigin,
@@ -427,7 +457,12 @@ const AviationAPI = (() => {
     getCached,
     setCache,
     CACHE_TTL,
-    formatFlightNumber
+    formatFlightNumber,
+    // API Key management
+    getActiveApiKey,
+    setCustomApiKey,
+    removeCustomApiKey,
+    hasCustomApiKey
   };
 })();
 

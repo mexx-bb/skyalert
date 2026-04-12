@@ -42,6 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initTabNav();
   initSearch();
   initSettings();
+  initApiKeySettings();
+  initManualRefresh();
   initModalHandlers();
   initOnlineStatus();
   initPWA();
@@ -53,7 +55,16 @@ document.addEventListener('DOMContentLoaded', () => {
   loadInitialData();
   initNewsFilters();
   loadNews(); // Load news in parallel
-  startRefreshCycle();
+
+  // Only auto-refresh if user explicitly enabled it
+  const autoRefreshSaved = localStorage.getItem('skyalert_auto_refresh');
+  if (autoRefreshSaved === 'true') {
+    $('#settingAutoRefresh').checked = true;
+    startRefreshCycle();
+  } else {
+    updateFreshnessBarManual();
+  }
+
   drawWorldMap();
   updateQuotaDisplay();
 });
@@ -87,8 +98,8 @@ async function loadInitialData() {
   showLoadingState('Flugdaten werden geladen...');
 
   try {
-    // Load flights related to Middle East (trending)
-    const result = await AviationAPI.getMiddleEastFlights();
+    // Load ALL flights globally (not just TLV)
+    const result = await AviationAPI.getAllFlights();
     currentFlights = (result.data || []).map(AviationAPI.transformFlight);
 
     // Also try to get some cancelled flights for the disruption view
@@ -389,10 +400,12 @@ function initSettings() {
   });
 
   $('#settingAutoRefresh').addEventListener('change', (e) => {
+    localStorage.setItem('skyalert_auto_refresh', String(e.target.checked));
     if (e.target.checked) {
       startRefreshCycle();
     } else {
       stopRefreshCycle();
+      updateFreshnessBarManual();
     }
   });
 
@@ -401,6 +414,78 @@ function initSettings() {
     saveAlerts();
     renderAlerts();
   });
+}
+
+// ===== MANUAL REFRESH =====
+function initManualRefresh() {
+  $('#manualRefreshBtn').addEventListener('click', async () => {
+    const btn = $('#manualRefreshBtn');
+    btn.classList.add('spinning');
+    btn.disabled = true;
+
+    try {
+      await loadInitialData();
+    } finally {
+      btn.classList.remove('spinning');
+      btn.disabled = false;
+    }
+  });
+}
+
+// ===== API KEY SETTINGS =====
+function initApiKeySettings() {
+  // Show current API key status
+  updateApiKeyStatus();
+
+  // Load existing custom key into input (masked)
+  if (AviationAPI.hasCustomApiKey()) {
+    const key = AviationAPI.getActiveApiKey();
+    $('#customApiKey').value = key.substring(0, 6) + '...' + key.substring(key.length - 4);
+  }
+
+  // Save custom key
+  $('#saveApiKey').addEventListener('click', () => {
+    const input = $('#customApiKey');
+    const key = input.value.trim();
+
+    if (AviationAPI.setCustomApiKey(key)) {
+      updateApiKeyStatus();
+      // Clear caches so new key is used
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('skyalert_cache_'));
+      keys.forEach(k => localStorage.removeItem(k));
+      alert('\u2705 API-Key gespeichert! Der Cache wurde geleert. Klicke auf \u21bb, um mit deinem Key Daten zu laden.');
+      // Mask the key
+      input.value = key.substring(0, 6) + '...' + key.substring(key.length - 4);
+    } else {
+      alert('\u274c Ung\u00fcltiger API-Key. Der Key muss mindestens 10 Zeichen lang sein.');
+    }
+  });
+
+  // Reset to default
+  $('#resetApiKey').addEventListener('click', () => {
+    AviationAPI.removeCustomApiKey();
+    $('#customApiKey').value = '';
+    updateApiKeyStatus();
+    // Clear caches
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('skyalert_cache_'));
+    keys.forEach(k => localStorage.removeItem(k));
+    alert('Standard-Key wiederhergestellt.');
+  });
+}
+
+function updateApiKeyStatus() {
+  const dot = $('.api-key-dot');
+  const text = $('#apiKeyStatusText');
+
+  if (AviationAPI.hasCustomApiKey()) {
+    dot.className = 'api-key-dot custom';
+    text.textContent = 'Eigener Key aktiv';
+    text.style.color = 'var(--accent-cyan)';
+  } else {
+    dot.className = 'api-key-dot active';
+    text.textContent = 'Standard-Key aktiv (gemeinsames Kontingent)';
+    text.style.color = 'var(--text-muted)';
+  }
 }
 
 // ===== MODAL =====
@@ -498,7 +583,7 @@ async function performRefresh() {
   updateRefreshIndicator('updating');
 
   try {
-    const result = await AviationAPI.getMiddleEastFlights();
+    const result = await AviationAPI.getAllFlights();
     if (result.data && result.data.length > 0) {
       currentFlights = result.data.map(AviationAPI.transformFlight);
       airlineStats = AviationAPI.computeAirlineStats(currentFlights);
@@ -506,7 +591,7 @@ async function performRefresh() {
       renderAll();
     }
     lastRefreshTime = Date.now();
-    updateRefreshIndicator(result.fromCache ? 'live' : 'live');
+    updateRefreshIndicator('live');
   } catch (err) {
     console.error('[SkyAlert] Refresh failed:', err);
   }
@@ -517,11 +602,66 @@ async function performRefresh() {
 // ===== QUOTA DISPLAY =====
 function updateQuotaDisplay() {
   const count = AviationAPI.getRequestCount();
+
+  // Text display on home page
   const el = $('#apiQuotaText');
   if (el) {
     el.textContent = `${count} / 500 API-Requests diesen Monat`;
     el.style.color = count > 400 ? 'var(--status-red)' : count > 250 ? 'var(--status-yellow)' : 'var(--text-muted)';
   }
+
+  // Data source quota counter
+  const dsQuota = $('#dsQuotaUsed');
+  if (dsQuota) dsQuota.textContent = String(count);
+
+  // Refresh mode indicator
+  const dsMode = $('#dsRefreshMode');
+  if (dsMode) {
+    const isAuto = localStorage.getItem('skyalert_auto_refresh') === 'true';
+    dsMode.textContent = isAuto ? 'Auto (3min)' : 'Manuell';
+  }
+
+  // Settings quota bar
+  const quotaBar = $('#quotaBarFill');
+  const quotaUsed = $('#quotaUsed');
+  if (quotaBar) {
+    const pct = Math.min((count / 500) * 100, 100);
+    quotaBar.style.width = pct + '%';
+    quotaBar.style.background = count > 400 ? 'var(--status-red)' : count > 250 ? 'var(--status-yellow)' : 'var(--accent-blue)';
+  }
+  if (quotaUsed) quotaUsed.textContent = String(count);
+
+  // Show warning if quota is running low
+  if (count >= 450) {
+    showQuotaWarning(count);
+  }
+}
+
+function showQuotaWarning(count) {
+  const banner = $('#disruptionBanner');
+  if (count >= 500) {
+    banner.style.display = 'block';
+    banner.querySelector('.disruption-text').textContent = 'API-Kontingent aufgebraucht! Eigenen Key in den Einstellungen eintragen.';
+    banner.querySelector('.disruption-label').textContent = '\u26a0\ufe0f API-Limit erreicht · ' + count + ' / 500 Requests';
+  }
+}
+
+function updateFreshnessBarManual() {
+  const freshnessTime = $('#freshnessTime');
+  const freshnessNext = $('#freshnessNext');
+  const progress = $('#freshnessProgress');
+
+  if (lastRefreshTime) {
+    const elapsed = Math.floor((Date.now() - lastRefreshTime) / 1000);
+    if (elapsed < 5) freshnessTime.textContent = 'gerade eben';
+    else if (elapsed < 60) freshnessTime.textContent = `vor ${elapsed}s`;
+    else freshnessTime.textContent = `vor ${Math.floor(elapsed / 60)} Min.`;
+  } else {
+    freshnessTime.textContent = '—';
+  }
+
+  freshnessNext.textContent = '\u21bb Manuell aktualisieren';
+  if (progress) progress.style.width = '0%';
 }
 
 // ===== RENDER ALL =====

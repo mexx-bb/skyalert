@@ -1331,6 +1331,192 @@ body {
 
 .settings-info { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 4px; }
 
+/* ===== MANUAL REFRESH BUTTON ===== */
+.refresh-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--accent-cyan);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-normal);
+  flex-shrink: 0;
+}
+
+.refresh-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 8px rgba(6,182,212,0.15);
+}
+
+.refresh-btn:active { transform: scale(0.9); }
+
+.refresh-btn.spinning {
+  animation: spinBtn 800ms linear infinite;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+@keyframes spinBtn {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== API KEY SETTINGS ===== */
+.api-key-input-group {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.settings-input {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 0.8rem;
+  outline: none;
+  transition: var(--transition-normal);
+}
+
+.settings-input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: var(--shadow-glow);
+}
+
+.settings-input::placeholder { color: var(--text-muted); }
+
+.save-btn {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  background: var(--accent-blue);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-normal);
+}
+
+.save-btn:hover { background: #2563eb; box-shadow: var(--shadow-glow); }
+
+.api-key-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.03);
+  border-radius: var(--radius-sm);
+}
+
+.api-key-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.api-key-dot.active { background: var(--status-green); }
+.api-key-dot.custom { background: var(--accent-cyan); }
+
+#apiKeyStatusText { font-size: 0.72rem; }
+
+/* ===== API INSTRUCTIONS ===== */
+.api-instructions {
+  margin-top: 14px;
+  background: linear-gradient(135deg, rgba(59,130,246,0.06), rgba(139,92,246,0.04));
+  border: 1px solid rgba(59,130,246,0.12);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.api-instructions h4 {
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.api-instructions ol {
+  padding-left: 18px;
+  margin: 0 0 10px;
+}
+
+.api-instructions li {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 4px;
+}
+
+.api-instructions a {
+  color: var(--text-accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+.api-instructions a:hover { text-decoration: underline; }
+
+.api-note {
+  font-size: 0.72rem;
+  color: var(--accent-cyan);
+  background: rgba(6,182,212,0.06);
+  border: 1px solid rgba(6,182,212,0.1);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  margin: 0;
+}
+
+/* ===== QUOTA BAR ===== */
+.quota-bar-container { margin-bottom: 8px; }
+
+.quota-bar {
+  height: 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.quota-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 500ms ease, background 300ms ease;
+  background: var(--accent-blue);
+}
+
+.quota-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.quota-labels span:first-child {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ===== SETTING HINT ===== */
+.setting-hint {
+  font-size: 0.72rem;
+  color: var(--status-yellow);
+  background: rgba(234, 179, 8, 0.06);
+  border: 1px solid rgba(234, 179, 8, 0.12);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
 /* ===== ANIMATIONS ===== */
 .flight-card, .watchlist-card, .airline-card, .alert-card {
   animation: cardSlideIn 400ms ease backwards;
