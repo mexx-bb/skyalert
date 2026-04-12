@@ -1405,6 +1405,9 @@ function drawWorldMap() {
 
   if (!leafletMap) return;
 
+  // IMPORTANT: Force Leaflet to recalculate map size since it might have been initialized while hidden
+  leafletMap.invalidateSize();
+
   // Clear existing markers
   flightMarkers.forEach(m => m.remove());
   flightMarkers = [];
