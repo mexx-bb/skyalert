@@ -587,6 +587,20 @@ function initSettings() {
     alerts.forEach(a => a.unread = false);
     saveAlerts();
     renderAlerts();
+    
+    // Feedback
+    const btn = $('#markAllRead');
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Erledigt';
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+      setTimeout(() => {
+        btn.textContent = orig;
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      }, 2000);
+    }
   });
 }
 

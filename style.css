@@ -767,9 +767,14 @@ body {
   margin-bottom: 10px;
   cursor: pointer;
   transition: var(--transition-normal);
+  opacity: 0.65; /* Read state */
 }
-.alert-card:hover { background: var(--bg-card-hover); }
-.alert-card.unread { border-left: 3px solid var(--accent-blue); }
+.alert-card:hover { background: var(--bg-card-hover); opacity: 0.8; }
+.alert-card.unread { 
+  border-left: 3px solid var(--accent-blue); 
+  opacity: 1; /* Unread state */
+}
+.alert-card.unread:hover { opacity: 1; }
 
 .alert-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 
