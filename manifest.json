@@ -2,7 +2,7 @@
   "name": "SkyAlert — Flugstatus & Reiseinformationen",
   "short_name": "SkyAlert",
   "description": "Echtzeit-Flugstatus, Verspätungen und Stornierungen für alle Airlines. Keine Anmeldung erforderlich.",
-  "start_url": "/",
+  "start_url": "/skyalert/",
   "display": "standalone",
   "background_color": "#0a0e1a",
   "theme_color": "#0a0e1a",

@@ -2,15 +2,15 @@
 // SkyAlert Service Worker — Offline Caching & PWA Support
 // ============================================================
 
-const CACHE_NAME = 'skyalert-v3';
+const CACHE_NAME = 'skyalert-v4';
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/api.js',
-  '/app.js',
-  '/manifest.json',
-  '/icons/icon.svg'
+  './',
+  './index.html',
+  './style.css',
+  './api.js',
+  './app.js',
+  './manifest.json',
+  './icons/icon.svg'
 ];
 
 // Install: cache static assets
@@ -51,7 +51,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
           return response;
         })
-        .catch(() => caches.match(event.request) || caches.match('/index.html'))
+        .catch(() => caches.match(event.request) || caches.match('./index.html'))
     );
     return;
   }
