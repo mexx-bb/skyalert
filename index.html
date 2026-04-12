@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0e1a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SkyAlert" />
+  <meta name="description" content="Echtzeit-Flugstatus, Verspätungen und Stornierungen für alle Airlines. Zuverlässige Informationen für Reisende weltweit." />
+
+  <title>SkyAlert — Flugstatus & Reiseinformationen</title>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- DSGVO / GDPR Consent Banner -->
+  <div class="dsgvo-overlay" id="dsgvoOverlay">
+    <div class="dsgvo-banner" id="dsgvoBanner">
+      <div class="dsgvo-header">
+        <span class="dsgvo-icon">🔒</span>
+        <h2>Datenschutz & Ihre Privatsphäre</h2>
+      </div>
+      <div class="dsgvo-body">
+        <p>SkyAlert nimmt Ihre Privatsphäre ernst. Diese App verwendet <strong>keine Anmeldung</strong> und speichert ausschließlich die folgenden Daten <strong>lokal auf Ihrem Gerät</strong>:</p>
+        <div class="dsgvo-details" id="dsgvoDetails">
+          <div class="dsgvo-detail-item">
+            <span class="dsgvo-detail-icon">⭐</span>
+            <div>
+              <strong>Watchlist-Flüge</strong>
+              <p>Flugnummern, die Sie zur Überwachung hinzufügen. Gespeichert in Ihrem Browser (LocalStorage).</p>
+            </div>
+          </div>
+          <div class="dsgvo-detail-item">
+            <span class="dsgvo-detail-icon">🔍</span>
+            <div>
+              <strong>Suchverlauf</strong>
+              <p>Ihre letzten 10 Flugnummer-Suchen. Gespeichert lokal, jederzeit löschbar.</p>
+            </div>
+          </div>
+          <div class="dsgvo-detail-item">
+            <span class="dsgvo-detail-icon">🔔</span>
+            <div>
+              <strong>Benachrichtigungseinstellungen</strong>
+              <p>Ihre Präferenzen für Push-Benachrichtigungen. Können jederzeit widerrufen werden.</p>
+            </div>
+          </div>
+          <div class="dsgvo-detail-item">
+            <span class="dsgvo-detail-icon">⚙️</span>
+            <div>
+              <strong>App-Einstellungen</strong>
+              <p>Sprache, Anzeigeoptionen und DSGVO-Einwilligung. Lokal gespeichert.</p>
+            </div>
+          </div>
+          <div class="dsgvo-detail-item">
+            <span class="dsgvo-detail-icon">📡</span>
+            <div>
+              <strong>Netzwerkanfragen</strong>
+              <p>Flugstatus-Abfragen an externe APIs (AviationStack, FlightAware). Es werden <strong>keine personenbezogenen Daten</strong> übermittelt — nur Flugnummern und Flughafencodes.</p>
+            </div>
+          </div>
+          <div class="dsgvo-detail-item">
+            <span class="dsgvo-detail-icon">📦</span>
+            <div>
+              <strong>Offline-Cache (Service Worker)</strong>
+              <p>Die App speichert Seiten und zuletzt abgerufene Flugdaten im Cache Ihres Browsers für Offline-Zugriff.</p>
+            </div>
+          </div>
+        </div>
+        <p class="dsgvo-note">
+          <strong>Wichtig:</strong> Es werden keine Cookies für Tracking oder Werbung eingesetzt.
+          Es findet keine Weitergabe an Dritte statt. Alle lokal gespeicherten Daten können Sie jederzeit über die App-Einstellungen oder durch Löschen der Browserdaten entfernen.
+        </p>
+        <p class="dsgvo-legal">
+          Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO (Einwilligung) · 
+          <a href="#" onclick="event.preventDefault()">Vollständige Datenschutzerklärung</a>
+        </p>
+      </div>
+      <div class="dsgvo-actions">
+        <button class="dsgvo-btn dsgvo-btn-accept" id="dsgvoAccept">Verstanden & Akzeptieren</button>
+        <button class="dsgvo-btn dsgvo-btn-minimal" id="dsgvoMinimal">Nur Notwendiges</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PWA Install Banner -->
+  <div class="pwa-install-banner" id="pwaInstallBanner" style="display: none;">
+    <div class="pwa-install-content">
+      <span>📲</span>
+      <span>SkyAlert als App installieren für Offline-Zugriff</span>
+    </div>
+    <div class="pwa-install-actions">
+      <button id="pwaInstallBtn" class="pwa-install-btn">Installieren</button>
+      <button id="pwaInstallDismiss" class="pwa-install-dismiss">✕</button>
+    </div>
+  </div>
+
+  <!-- Main App Shell -->
+  <div class="app-shell" id="appShell">
+
+    <!-- Top Bar -->
+    <header class="top-bar" id="topBar">
+      <div class="top-bar-left">
+        <h1 class="logo">✈️ <span>SkyAlert</span></h1>
+      </div>
+      <div class="top-bar-right">
+        <div class="refresh-indicator" id="refreshIndicator" title="Daten werden aktualisiert">
+          <div class="refresh-dot"></div>
+          <span class="refresh-text" id="refreshText">Live</span>
+        </div>
+        <button class="top-bar-btn" id="settingsBtn" aria-label="Einstellungen">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Data Freshness Bar -->
+    <div class="freshness-bar" id="freshnessBar">
+      <div class="freshness-inner">
+        <span class="freshness-label">Letzte Aktualisierung:</span>
+        <span class="freshness-time" id="freshnessTime">gerade eben</span>
+        <span class="freshness-sep">·</span>
+        <span class="freshness-next" id="freshnessNext">Nächste in 30s</span>
+      </div>
+      <div class="freshness-progress" id="freshnessProgress"></div>
+    </div>
+
+    <!-- PAGES -->
+    <main class="pages-container" id="pagesContainer">
+
+      <!-- PAGE: Suche -->
+      <section class="page active" id="pageSearch">
+        <div class="page-scroll">
+
+          <div class="search-wrapper">
+            <div class="search-box" id="searchBox">
+              <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" id="searchInput" placeholder="Flugnummer oder Flughafen eingeben..." autocomplete="off" />
+              <button class="search-clear" id="searchClear" style="display:none;">✕</button>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="quick-actions">
+            <button class="quick-action-card" data-action="nearby">
+              <div class="qa-icon">📍</div>
+              <div class="qa-text">
+                <span class="qa-title">Nächster Flughafen</span>
+                <span class="qa-sub">Abflüge & Ankünfte</span>
+              </div>
+            </button>
+            <button class="quick-action-card" data-action="disruptions">
+              <div class="qa-icon">⚠️</div>
+              <div class="qa-text">
+                <span class="qa-title">Störungsübersicht</span>
+                <span class="qa-sub">Aktuelle Sperrungen</span>
+              </div>
+            </button>
+          </div>
+
+          <!-- Disruption Banner -->
+          <div class="disruption-banner" id="disruptionBanner" role="alert">
+            <div class="disruption-pulse"></div>
+            <div class="disruption-content">
+              <div class="disruption-label">⚠️ Aktive Störung · Aktualisiert vor 2 Min.</div>
+              <div class="disruption-text">Naher Osten — 47 Flüge betroffen</div>
+              <div class="disruption-tap">Details anzeigen →</div>
+            </div>
+          </div>
+
+          <!-- Trending -->
+          <div class="section-header">
+            <h2>Flüge nach Tel Aviv (Live)</h2>
+            <span class="section-badge" id="trendingCount">Lädt...</span>
+          </div>
+          <div class="flight-list" id="trendingList"></div>
+
+          <!-- Recent Searches -->
+          <div class="section-header">
+            <h2>Letzte Suchen</h2>
+            <button class="section-action" id="clearRecent">Löschen</button>
+          </div>
+          <div class="recent-list" id="recentList"></div>
+
+          <!-- Data Sources Info -->
+          <div class="data-sources-info">
+            <h3>📡 Datenquelle: AviationStack API (Live)</h3>
+            <div class="ds-grid">
+              <div class="ds-item">
+                <span class="ds-interval">3min</span>
+                <span class="ds-name">Flugstatus</span>
+              </div>
+              <div class="ds-item">
+                <span class="ds-interval">2min</span>
+                <span class="ds-name">Watchlist</span>
+              </div>
+              <div class="ds-item">
+                <span class="ds-interval">5min</span>
+                <span class="ds-name">Störungszonen</span>
+              </div>
+              <div class="ds-item">
+                <span class="ds-interval">10min</span>
+                <span class="ds-name">Airline-Status</span>
+              </div>
+            </div>
+            <p class="ds-note">Echtzeit-Daten via AviationStack API · Cache: 3 Min. TTL · <span id="apiQuotaText" style="color: var(--text-muted);">0 / 500 API-Requests diesen Monat</span></p>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- PAGE: Karte -->
+      <section class="page" id="pageMap">
+        <div class="page-scroll">
+          <div class="page-top-row">
+            <h2>Weltkarte</h2>
+            <div class="map-legend">
+              <span class="legend-item"><span class="dot green"></span>Normal</span>
+              <span class="legend-item"><span class="dot yellow"></span>Verzögert</span>
+              <span class="legend-item"><span class="dot red"></span>Gesperrt</span>
+            </div>
+          </div>
+          <div class="map-container" id="mapContainer">
+            <canvas id="worldMap"></canvas>
+            <div class="zone-overlay zone-middleeast">
+              <div class="zone-pulse"></div>
+              <div class="zone-label">Naher Osten<br/><small>12 Lufträume eingeschränkt</small></div>
+            </div>
+            <div class="zone-overlay zone-africa">
+              <div class="zone-label-small">Nordafrika<br/><small>3 Routen betroffen</small></div>
+            </div>
+          </div>
+          <div class="detail-card">
+            <div class="detail-header">
+              <span class="detail-region">🌍 Naher Osten</span>
+              <span class="status-badge critical">Kritisch</span>
+            </div>
+            <div class="detail-body">
+              <div class="detail-stat"><span class="stat-number">47</span><span class="stat-label">Betroffene Flüge</span></div>
+              <div class="detail-stat"><span class="stat-number">8</span><span class="stat-label">Airlines</span></div>
+              <div class="detail-stat"><span class="stat-number">5</span><span class="stat-label">Sperrungen</span></div>
+            </div>
+            <div class="affected-airlines">
+              <span class="airline-chip">Lufthansa</span>
+              <span class="airline-chip">Turkish Airlines</span>
+              <span class="airline-chip">Emirates</span>
+              <span class="airline-chip">Qatar Airways</span>
+              <span class="airline-chip">+4 mehr</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE: Watchlist -->
+      <section class="page" id="pageWatchlist">
+        <div class="page-scroll">
+          <div class="page-top-row">
+            <h2>Meine Watchlist</h2>
+            <button class="add-btn" id="addFlightBtn">+ Flug hinzufügen</button>
+          </div>
+          <div class="watchlist-container" id="watchlistContainer"></div>
+        </div>
+      </section>
+
+      <!-- PAGE: Airlines -->
+      <section class="page" id="pageAirlines">
+        <div class="page-scroll">
+          <div class="page-top-row">
+            <h2>Airlines</h2>
+            <span class="section-badge">6 Airlines</span>
+          </div>
+          <div class="airlines-container" id="airlinesContainer"></div>
+        </div>
+      </section>
+
+      <!-- PAGE: News -->
+      <section class="page" id="pageNews">
+        <div class="page-scroll">
+          <div class="page-top-row">
+            <h2>📰 Nachrichten</h2>
+            <span class="section-badge" id="newsCount">Lädt...</span>
+          </div>
+
+          <!-- News Category Filter -->
+          <div class="news-filter-bar" id="newsFilterBar">
+            <button class="news-filter-chip active" data-filter="all">Alle</button>
+            <button class="news-filter-chip" data-filter="flugverkehr">✈️ Flugverkehr</button>
+            <button class="news-filter-chip" data-filter="israel">⚠️ Israel/Gaza</button>
+            <button class="news-filter-chip" data-filter="regional">🔴 Regional</button>
+            <button class="news-filter-chip" data-filter="diplomatie">🕊️ Diplomatie</button>
+          </div>
+
+          <!-- Breaking News Ticker -->
+          <div class="news-ticker" id="newsTicker" style="display: none;">
+            <span class="ticker-label">EILMELDUNG</span>
+            <div class="ticker-content" id="tickerContent"></div>
+          </div>
+
+          <!-- News List -->
+          <div class="news-list" id="newsContainer">
+            <div class="empty-state">
+              <div class="loading-spinner"></div>
+              <div class="empty-text">Nachrichten werden geladen...</div>
+            </div>
+          </div>
+
+          <div class="news-source-info">
+            <p>📡 Quellen: Google News (DE) · tagesschau.de · Spiegel · ZEIT · FAZ · n-tv · u.a.</p>
+            <p>Aktualisierung: alle 15 Minuten · Alle Nachrichten auf Deutsch</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE: Alerts -->
+      <section class="page" id="pageAlerts">
+        <div class="page-scroll">
+          <div class="page-top-row">
+            <h2>Benachrichtigungen</h2>
+            <button class="section-action" id="markAllRead">Alle gelesen</button>
+          </div>
+          <div class="alerts-container" id="alertsContainer"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Flight Detail Modal -->
+    <div class="modal-overlay" id="flightDetailModal">
+      <div class="modal-content">
+        <div class="modal-handle"></div>
+        <button class="modal-close" id="modalClose">✕</button>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="modal-overlay" id="settingsPanel">
+      <div class="modal-content settings-content">
+        <div class="modal-handle"></div>
+        <button class="modal-close" id="settingsClose">✕</button>
+        <h2 style="margin-bottom: 16px;">⚙️ Einstellungen</h2>
+
+        <div class="settings-section">
+          <h3>Datenschutz (DSGVO)</h3>
+          <div class="setting-item">
+            <div>
+              <strong>Suchverlauf speichern</strong>
+              <p>Letzte 10 Suchen lokal speichern</p>
+            </div>
+            <label class="toggle"><input type="checkbox" id="settingSearchHistory" checked /><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-item">
+            <div>
+              <strong>Offline-Cache</strong>
+              <p>Flugdaten für Offline-Zugriff zwischenspeichern</p>
+            </div>
+            <label class="toggle"><input type="checkbox" id="settingOfflineCache" checked /><span class="toggle-slider"></span></label>
+          </div>
+          <button class="danger-btn" id="deleteAllData">🗑️ Alle lokalen Daten löschen</button>
+          <button class="link-btn" id="showDsgvo">📄 Datenschutzerklärung anzeigen</button>
+        </div>
+
+        <div class="settings-section">
+          <h3>Aktualisierung</h3>
+          <div class="setting-item">
+            <div>
+              <strong>Auto-Refresh</strong>
+              <p>Flugstatus automatisch aktualisieren</p>
+            </div>
+            <label class="toggle"><input type="checkbox" id="settingAutoRefresh" checked /><span class="toggle-slider"></span></label>
+          </div>
+          <div class="refresh-intervals">
+            <div class="ri-item"><span class="ri-label">Flugstatus</span><span class="ri-value">alle 3 Minuten</span></div>
+            <div class="ri-item"><span class="ri-label">Watchlist</span><span class="ri-value">alle 2 Minuten</span></div>
+            <div class="ri-item"><span class="ri-label">Störungszonen</span><span class="ri-value">alle 5 Minuten</span></div>
+            <div class="ri-item"><span class="ri-label">Airlines</span><span class="ri-value">alle 10 Minuten</span></div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>App-Info</h3>
+          <p class="settings-info">Version 1.0.0 · PWA · Keine Anmeldung erforderlich</p>
+          <p class="settings-info">Datenquelle: AviationStack API (Echtzeit)</p>
+          <p class="settings-info" id="settingsQuota">API-Kontingent: 500 Requests / Monat (Free Tier)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Tab Bar -->
+    <nav class="tab-bar" id="tabBar" role="navigation" aria-label="Hauptnavigation">
+      <button class="tab-item active" data-page="pageSearch" id="tabSearch" aria-label="Suche">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <span>Suche</span>
+      </button>
+      <button class="tab-item" data-page="pageMap" id="tabMap" aria-label="Karte">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <span>Karte</span>
+      </button>
+      <button class="tab-item" data-page="pageWatchlist" id="tabWatchlist" aria-label="Watchlist">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span>Watchlist</span>
+        <span class="tab-badge" id="watchlistBadge">3</span>
+      </button>
+      <button class="tab-item" data-page="pageNews" id="tabNews" aria-label="Nachrichten">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
+        <span>News</span>
+        <span class="tab-badge" id="newsBadge" style="display:none;"></span>
+      </button>
+      <button class="tab-item" data-page="pageAlerts" id="tabAlerts" aria-label="Benachrichtigungen">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span>Alerts</span>
+        <span class="tab-badge" id="alertsBadge">5</span>
+      </button>
+    </nav>
+  </div>
+
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
