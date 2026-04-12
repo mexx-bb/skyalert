@@ -390,6 +390,36 @@ body {
 .route-btn:hover { background: #2563eb; box-shadow: var(--shadow-glow); }
 .route-btn:active { transform: scale(0.95); }
 
+@media (max-width: 500px) {
+  .route-inputs {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .route-arrow {
+    display: none;
+  }
+  .route-inputs > div {
+    display: block;
+    width: 100%;
+  }
+  .route-input {
+    width: 100%;
+  }
+  .route-btn {
+    width: 100%;
+    padding: 12px 14px;
+  }
+  .api-key-input-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .save-btn {
+    width: 100%;
+    padding: 12px 14px;
+  }
+}
+
 /* Autocomplete */
 .autocomplete-list {
   position: absolute;
