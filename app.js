@@ -295,6 +295,58 @@ function initSearch() {
     clear.style.display = 'none';
     renderTrending();
   });
+
+  // Route Search
+  $('#routeSearchBtn').addEventListener('click', () => {
+    const from = $('#routeFrom').value.trim().toUpperCase();
+    const to = $('#routeTo').value.trim().toUpperCase();
+    if (from || to) {
+      performRouteSearch(from, to);
+    }
+  });
+
+  // Enter key for route search
+  $('#routeFrom').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') $('#routeSearchBtn').click();
+  });
+  $('#routeTo').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') $('#routeSearchBtn').click();
+  });
+}
+
+async function performRouteSearch(fromIata, toIata) {
+  showTrendingLoading();
+
+  try {
+    const result = await AviationAPI.getFlightsByRoute(fromIata, toIata);
+    const flights = (result.data || []).map(AviationAPI.transformFlight);
+
+    if (flights.length === 0) {
+      $('#trendingList').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🔍</div>
+          <div class="empty-text">Keine Flüge gefunden</div>
+          <div class="empty-sub">Für die Strecke ${fromIata || 'Alle'} → ${toIata || 'Alle'} konnten wir derzeit keine echten Live-Flüge abrufen.</div>
+        </div>
+      `;
+      $('#trendingCount').textContent = '0 Ergebnisse';
+    } else {
+      $('#trendingList').innerHTML = flights.map(f => createFlightCard(f)).join('');
+      $('#trendingCount').textContent = `${flights.length} Ergebnisse`;
+    }
+
+    saveRecentSearch(`${fromIata || '*'} - ${toIata || '*'}`);
+    updateQuotaDisplay();
+  } catch (err) {
+    $('#trendingList').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <div class="empty-text">Fehler bei der Suche</div>
+        <div class="empty-sub">${err.message}</div>
+      </div>
+    `;
+    $('#trendingCount').textContent = 'Fehler';
+  }
 }
 
 async function performSearch(query) {

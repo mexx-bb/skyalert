@@ -149,6 +149,16 @@
               <input type="text" id="searchInput" placeholder="Flugnummer oder Flughafen eingeben..." autocomplete="off" />
               <button class="search-clear" id="searchClear" style="display:none;">✕</button>
             </div>
+            
+            <div class="route-search-box" id="routeSearchBox">
+              <h3 class="route-search-title">Strecke suchen</h3>
+              <div class="route-inputs">
+                <input type="text" id="routeFrom" class="route-input" placeholder="Von (z.B. FRA)" maxlength="3" autocomplete="off" />
+                <span class="route-arrow">→</span>
+                <input type="text" id="routeTo" class="route-input" placeholder="Nach (z.B. JFK)" maxlength="3" autocomplete="off" />
+                <button class="route-btn" id="routeSearchBtn">Suchen</button>
+              </div>
+            </div>
           </div>
 
           <!-- Quick Actions -->

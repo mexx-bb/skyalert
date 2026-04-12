@@ -195,6 +195,17 @@ const AviationAPI = (() => {
   }
 
   /**
+   * Fetch flights by precise route (origin -> destination)
+   */
+  async function getFlightsByRoute(depIata, arrIata) {
+    const params = { limit: 30 };
+    if (depIata) params.dep_iata = depIata;
+    if (arrIata) params.arr_iata = arrIata;
+    
+    return apiCall('flights', params, `flights_route_${depIata}_${arrIata}`, CACHE_TTL.flights);
+  }
+
+  /**
    * Fetch flights to a specific destination (for loading grouped by destination)
    */
   async function getFlightsToDestination(arrIata) {
@@ -446,6 +457,7 @@ const AviationAPI = (() => {
     getFlightByIata,
     getAllFlights,
     getMiddleEastFlights,
+    getFlightsByRoute,
     getFlightsToDestination,
     getFlightsFromOrigin,
     getActiveFlightsByAirline,
