@@ -166,12 +166,11 @@ const AviationAPI = (() => {
   /**
    * Search for a specific flight by IATA code (e.g., "LH690")
    */
-  async function getFlightByIata(flightIata) {
+  async function getFlightByIata(flightIata, dateStr) {
     const cleaned = flightIata.replace(/\s/g, '').toUpperCase();
-    return apiCall('flights', {
-      flight_iata: cleaned,
-      limit: 5
-    }, `flight_${cleaned}`, CACHE_TTL.flights);
+    const params = { flight_iata: cleaned, limit: 5 };
+    if (dateStr) params.flight_date = dateStr;
+    return apiCall('flights', params, `flight_${cleaned}_${dateStr || 'default'}`, CACHE_TTL.flights);
   }
 
   /**
@@ -249,12 +248,12 @@ const AviationAPI = (() => {
   /**
    * General search — tries flight IATA first, then airport
    */
-  async function search(query) {
+  async function search(query, dateStr) {
     const cleaned = query.trim().replace(/\s/g, '').toUpperCase();
 
     // If looks like a flight number (letters + numbers), search as flight
     if (/^[A-Z]{2}\d{1,5}$/.test(cleaned)) {
-      return getFlightByIata(cleaned);
+      return getFlightByIata(cleaned, dateStr);
     }
 
     // If looks like an IATA airport code (3 letters)
@@ -263,7 +262,7 @@ const AviationAPI = (() => {
     }
 
     // Try as flight number anyway
-    return getFlightByIata(cleaned);
+    return getFlightByIata(cleaned, dateStr);
   }
 
   // ===== TRANSFORM HELPERS =====

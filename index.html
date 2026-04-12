@@ -143,11 +143,15 @@
       <section class="page active" id="pageSearch">
         <div class="page-scroll">
 
-          <div class="search-wrapper">
+          <div class="search-box-container">
             <div class="search-box" id="searchBox">
-              <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input type="text" id="searchInput" placeholder="Flugnummer oder Flughafen eingeben..." autocomplete="off" />
-              <button class="search-clear" id="searchClear" style="display:none;">✕</button>
+              <h3 class="route-search-title" style="margin-bottom: 6px; font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase;">Flugnummer suchen</h3>
+              <div style="display: flex; gap: 8px; align-items: center; background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                <span style="font-size: 1.1rem; color: var(--text-muted); margin-right: 4px;">🔍</span>
+                <input type="text" id="searchInput" style="flex: 1; background: transparent; border: none; color: white; outline: none; font-size: 0.95rem; min-width: 0;" placeholder="z.B. LH690 oder FRA" autocomplete="off" />
+                <input type="date" id="searchDate" style="flex: 0 0 130px; background: transparent; border: none; color: var(--text-muted); outline: none; font-size: 0.85rem;" />
+                <button class="search-clear" id="searchClear" style="display:none; background: none; border: none; color: white; cursor: pointer;">✕</button>
+              </div>
             </div>
             
             <div class="route-search-box" id="routeSearchBox">

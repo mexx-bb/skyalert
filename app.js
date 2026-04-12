@@ -304,6 +304,7 @@ function initQuickActions() {
 // ===== SEARCH =====
 function initSearch() {
   const input = $('#searchInput');
+  const dateInput = $('#searchDate');
   const clear = $('#searchClear');
   let searchTimeout = null;
 
@@ -312,7 +313,7 @@ function initSearch() {
 
     clearTimeout(searchTimeout);
     if (input.value.trim().length >= 2) {
-      searchTimeout = setTimeout(() => performSearch(input.value.trim()), 600);
+      searchTimeout = setTimeout(() => performSearch(input.value.trim(), dateInput ? dateInput.value : ''), 600);
     } else if (input.value.trim().length === 0) {
       renderTrending();
     }
@@ -322,10 +323,18 @@ function initSearch() {
     if (e.key === 'Enter') {
       clearTimeout(searchTimeout);
       if (input.value.trim().length >= 2) {
-        performSearch(input.value.trim());
+        performSearch(input.value.trim(), dateInput ? dateInput.value : '');
       }
     }
   });
+  
+  if (dateInput) {
+    dateInput.addEventListener('change', () => {
+      if (input.value.trim().length >= 2) {
+        performSearch(input.value.trim(), dateInput.value);
+      }
+    });
+  }
 
   clear.addEventListener('click', () => {
     input.value = '';
@@ -475,11 +484,11 @@ async function performRouteSearch(fromVal, toVal) {
   }
 }
 
-async function performSearch(query) {
+async function performSearch(query, dateStr) {
   showTrendingLoading();
 
   try {
-    const result = await AviationAPI.search(query);
+    const result = await AviationAPI.search(query, dateStr);
     const flights = (result.data || []).map(AviationAPI.transformFlight);
 
     if (flights.length === 0) {
@@ -1130,6 +1139,26 @@ async function loadNews() {
     newsLoaded = true;
     renderNews();
     updateNewsBadge();
+    
+    // Update Home Screen Disruption Banner with real Airline Info
+    const banner = $('#disruptionBanner');
+    if (banner && newsArticles.length > 0) {
+      // Find the most relevant crisis article
+      const crisisKeywords = ['Luftraum', 'streicht', 'eingestellt', 'gesperrt', 'Israel', 'Iran', 'Streik', 'gestrichen'];
+      const crisisArticle = newsArticles.find(a => 
+        crisisKeywords.some(kw => a.title.includes(kw) || a.snippet.includes(kw))
+      );
+      
+      if (crisisArticle) {
+        banner.style.display = 'flex';
+        $('.disruption-label').textContent = `🚨 WICHTIGE LUFTFAHRT/AIRLINE INFO`;
+        $('.disruption-text').innerHTML = `<strong>${crisisArticle.title.split(' - ')[0]}</strong><br/><span style="font-size:0.75rem; color:var(--text-muted);">${truncate(crisisArticle.snippet, 60)}</span>`;
+        $('.disruption-tap').innerHTML = `Quelle: ${crisisArticle.source} →`;
+        banner.onclick = () => window.open(crisisArticle.url, '_blank');
+      } else {
+        banner.style.display = 'none';
+      }
+    }
 
     // Schedule next refresh in 15 minutes
     if (newsRefreshTimer) clearTimeout(newsRefreshTimer);
