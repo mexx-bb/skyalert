@@ -259,11 +259,12 @@ function switchTab(pageId) {
   if (pageId === 'pageMap') {
     drawWorldMap();
     // Invalidate size immediately and repeatedly during CSS transition
-    [50, 150, 300, 500].forEach(delay => {
+    [50, 150, 260, 400].forEach(delay => {
       setTimeout(() => { 
         if (leafletMap) {
           leafletMap.invalidateSize(true);
-          if (delay === 300) window.dispatchEvent(new Event('resize'));
+          // Force redraw by slightly wiggling the view to fix CSS translate() tile loading bug
+          leafletMap.setView(leafletMap.getCenter(), leafletMap.getZoom(), {animate: false});
         }
       }, delay);
     });
@@ -1530,33 +1531,28 @@ async function fetchLiveRadarData() {
   if (isFetchingRadar || !leafletMap) return;
   isFetchingRadar = true;
   try {
-    const b = leafletMap.getBounds();
-    const lamin = b.getSouth();
-    const lomin = b.getWest();
-    const lamax = b.getNorth();
-    const lomax = b.getEast();
+    const center = leafletMap.getCenter();
+    const radius = leafletMap.getZoom() > 6 ? 100 : 250; 
     
-    let url = 'https://opensky-network.org/api/states/all';
-    if (leafletMap.getZoom() > 3) {
-      url += `?lamin=${lamin}&lomin=${lomin}&lamax=${lamax}&lomax=${lomax}`;
-    }
+    // Use open ADSB API which natively supports CORS and has no strict limits
+    const url = `https://api.adsb.lol/v2/lat/${center.lat}/lon/${center.lng}/dist/${radius}`;
 
     const res = await fetch(url);
-    if (!res.ok) throw new Error('OpenSky Error');
+    if (!res.ok) throw new Error('ADSB.lol Error');
     const data = await res.json();
     
     // Clear old radar markers
     radarMarkers.forEach(m => m.remove());
     radarMarkers = [];
 
-    const states = (data.states || []).slice(0, 800);
+    const planes = (data.ac || []).slice(0, 400);
 
-    states.forEach(s => {
-      const callsign = (s[1] || '').trim();
-      const lon = s[5];
-      const lat = s[6];
-      const track = s[10] || 0;
-      const alt = s[13] || s[7] || 0;
+    planes.forEach(s => {
+      const callsign = (s.flight || '').trim();
+      const lon = s.lon;
+      const lat = s.lat;
+      const track = s.track || 0;
+      const alt = s.alt_geom || s.alt_baro || 0;
 
       if (!lon || !lat) return;
 
@@ -1570,8 +1566,8 @@ async function fetchLiveRadarData() {
       const icon = L.divIcon({ className: 'custom-flight-icon', html: markerHtml, iconSize: [20, 20], iconAnchor: [10, 10] });
       const marker = L.marker([lat, lon], { icon, zIndexOffset: 0 }).addTo(leafletMap);
       
-      const pAlt = Math.round(alt);
-      marker.bindPopup(`<strong>🛩️ ${callsign || 'Radar Flug'}</strong><br/>Höhe: ${pAlt}m<br/>Radar: OpenSky Network`);
+      const pAlt = Math.round(alt * 0.3048); // Convert feet to meters
+      marker.bindPopup(`<strong>🛩️ ${callsign || 'Radar Flug'}</strong><br/>Höhe: ${pAlt}m<br/>Radar: ADSB.lol`);
       radarMarkers.push(marker);
     });
 

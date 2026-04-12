@@ -247,20 +247,24 @@ body {
 .page {
   position: absolute;
   inset: 0;
-  opacity: 0;
-  transform: translateX(16px);
-  pointer-events: none;
-  transition: opacity 250ms ease, transform 250ms ease;
+  display: none;
+  flex-direction: column;
 }
 
 .page.active {
-  opacity: 1;
-  transform: translateX(0);
+  display: flex;
+  animation: pageFadeIn 250ms ease forwards;
   pointer-events: all;
+  z-index: 10;
+}
+
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .page-scroll {
-  height: 100%;
+  flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 16px;
