@@ -457,11 +457,20 @@ async function performRouteSearch(fromVal, toVal) {
     const result = await AviationAPI.getFlightsByRoute(fromIata, toIata);
     const flights = (result.data || []).map(AviationAPI.transformFlight);
 
-    // Make available for modal and watchlist
+    // Make available for modal and watchlist (O(N+M) complexity)
+    const currentMap = new Map();
+    for (let i = 0; i < currentFlights.length; i++) {
+      currentMap.set(currentFlights[i].numberRaw, i);
+    }
+
     flights.forEach(f => {
-      const idx = currentFlights.findIndex(cf => cf.numberRaw === f.numberRaw);
-      if (idx !== -1) currentFlights[idx] = f;
-      else currentFlights.push(f);
+      const idx = currentMap.get(f.numberRaw);
+      if (idx !== undefined) {
+        currentFlights[idx] = f;
+      } else {
+        currentFlights.push(f);
+        currentMap.set(f.numberRaw, currentFlights.length - 1);
+      }
     });
 
     if (flights.length === 0) {
@@ -499,11 +508,20 @@ async function performSearch(query, dateStr) {
     const result = await AviationAPI.search(query, dateStr);
     const flights = (result.data || []).map(AviationAPI.transformFlight);
 
-    // Make available for modal and watchlist
+    // Make available for modal and watchlist (O(N+M) complexity)
+    const searchMap = new Map();
+    for (let i = 0; i < currentFlights.length; i++) {
+      searchMap.set(currentFlights[i].numberRaw, i);
+    }
+
     flights.forEach(f => {
-      const idx = currentFlights.findIndex(cf => cf.numberRaw === f.numberRaw);
-      if (idx !== -1) currentFlights[idx] = f;
-      else currentFlights.push(f);
+      const idx = searchMap.get(f.numberRaw);
+      if (idx !== undefined) {
+        currentFlights[idx] = f;
+      } else {
+        currentFlights.push(f);
+        searchMap.set(f.numberRaw, currentFlights.length - 1);
+      }
     });
 
     if (flights.length === 0) {
