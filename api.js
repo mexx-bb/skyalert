@@ -527,7 +527,7 @@ const NewsAPI = (() => {
     const allArticles = [];
     const seenTitles = new Set();
 
-    for (const topic of SEARCH_TOPICS) {
+    const fetchPromises = SEARCH_TOPICS.map(async (topic) => {
       try {
         const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(topic)}&hl=de&gl=DE&ceid=DE:de`;
         const apiUrl = `${RSS2JSON_BASE}?rss_url=${encodeURIComponent(rssUrl)}&count=10`;
@@ -535,22 +535,26 @@ const NewsAPI = (() => {
         const response = await fetch(apiUrl);
         const json = await response.json();
 
-        if (json.status === 'ok' && json.items) {
-          json.items.forEach(item => {
-            // Deduplicate by title
-            const titleKey = item.title.substring(0, 50).toLowerCase();
-            if (!seenTitles.has(titleKey)) {
-              seenTitles.add(titleKey);
-              allArticles.push(transformArticle(item));
-            }
-          });
-        }
+        return { topic, json };
       } catch (e) {
         console.warn(`[SkyAlert News] Fetch failed for topic "${topic}":`, e);
+        return { topic, json: null };
       }
+    });
 
-      // Small delay between requests to avoid rate limiting
-      await new Promise(r => setTimeout(r, 200));
+    const results = await Promise.all(fetchPromises);
+
+    for (const { json } of results) {
+      if (json && json.status === 'ok' && json.items) {
+        json.items.forEach(item => {
+          // Deduplicate by title
+          const titleKey = item.title.substring(0, 50).toLowerCase();
+          if (!seenTitles.has(titleKey)) {
+            seenTitles.add(titleKey);
+            allArticles.push(transformArticle(item));
+          }
+        });
+      }
     }
 
     // Sort by date (newest first)
