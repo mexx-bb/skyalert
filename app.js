@@ -25,7 +25,6 @@ let alerts = [];               // Alert notifications
 let newsArticles = [];         // News articles
 let currentNewsFilter = 'all'; // Current news filter
 let newsLoaded = false;        // Whether news has been loaded once
-let isLoading = false;
 
 // Watchlist: stored in localStorage as array of flight IATA codes
 const WATCHLIST_KEY = 'skyalert_watchlist';
@@ -1611,7 +1610,6 @@ window.addEventListener('resize', () => {
 
 // ===== UI HELPERS =====
 function showLoadingState(msg) {
-  isLoading = true;
   const list = $('#trendingList');
   if (list) {
     list.innerHTML = `
@@ -1624,7 +1622,6 @@ function showLoadingState(msg) {
 }
 
 function hideLoadingState() {
-  isLoading = false;
 }
 
 function showTrendingLoading() {
